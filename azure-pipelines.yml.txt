@@ -52,3 +52,34 @@ stages:
           artifact: drop
           displayName: "Publish build artifact"
           
+# ------------------------------------------------------
+# STAGE 2: DEPLOY (Continuous Deployment)
+# ------------------------------------------------------
+- stage: Deploy
+  displayName: "Deploy to Azure Web App"
+  dependsOn: Build         # Run only after Build stage succeeds
+
+  jobs:
+    - deployment: DeployWebApp
+      displayName: "Deploy to Production Web App"
+      environment: 'production'   # Environment name (can have approvals/checks in DevOps)
+      pool:
+        vmImage: 'ubuntu-latest'
+
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              # 1️⃣ Download the build artifact from previous stage
+              - download: current
+                artifact: drop
+                displayName: "Download build artifact"
+
+              # 2️⃣ Deploy artifact to Azure Web App
+              - task: AzureWebApp@1
+                displayName: "Deploy app to Azure Web App"
+                inputs:
+                  azureSubscription: '<Your-Service-Connection-Name>'  # Set up in Project Settings → Service connections
+                  appName: '<Your-WebApp-Name>'                         # The name of your Azure App Service
+                  package: '$(Pipeline.Workspace)/drop/**/*.zip'         # The package generated during Build
+
